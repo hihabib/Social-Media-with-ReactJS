@@ -1,20 +1,19 @@
 import PostCard from '../PostCard/PostCard.jsx'
-import {useState} from 'react'
+import {useState, useEffect} from 'react'
 import {useFormik} from 'formik';
+import {saveLocalStorage, getLocalStorage} from '../../utils/localStorage.js';
+import {POST} from '../../constants/storageKey.js'
+import {useNavigate} from 'react-router-dom';
 
 const NewsFeed = () => {
     // current user
-    const {userName} = JSON.parse(window.localStorage.getItem('user'))
+    const user = JSON.parse(window.localStorage.getItem('user'));
 
     // newsfeed posts
-    const [posts, setPosts] = useState([
-        {
-            id: "123456",
-            userName: "Arafat",
-            userPicture: "http://placehold.co/30x30",
-            content: "This is my new post"
-        }
-    ]);
+    const [posts, setPosts] = useState([]);
+    useEffect(() => {
+        setPosts(getLocalStorage(POST) ?? []);
+    }, []);
 
     // handle post creation
     const {getFieldProps, handleSubmit} = useFormik({
@@ -25,12 +24,16 @@ const NewsFeed = () => {
           //update post statee
          setPosts((prevPosts) => {
              resetForm();
-             return [{
+             const newPost = {
                  id: Math.round(Math.random()*100000000),
-                 userName: userName,
+                 userName: user?.userName,
                  userPicture: "http://placehold.co/30x30",
-                 content: postContent
-             }, ...prevPosts ]
+                 content: postContent,
+                 likedBy: []
+             };
+             // save new post at database
+             saveLocalStorage(newPost, POST);
+             return [newPost, ...prevPosts ]
          })
         },
     });
@@ -44,8 +47,8 @@ const NewsFeed = () => {
             </div>
             <div className="flex-shrink-0 flex-grow-1">
                 <div className="form-floating">
-                    <textarea className="form-control" placeholder={`What's on your mind, ${userName}?`} id="postContent" {...getFieldProps('postContent')} />
-                    <label htmlFor="postContent">What's on your mind, {userName}?</label>
+                    <textarea className="form-control" placeholder={`What's on your mind, ${user?.userName}?`} id="postContent" {...getFieldProps('postContent')} />
+                    <label htmlFor="postContent">What's on your mind, {user?.userName}?</label>
                 </div>
             </div>
         </div>
@@ -53,10 +56,10 @@ const NewsFeed = () => {
     </form>
 
     {/*show all posts*/}
-    {posts.map(post => {
+    {posts?.map(post => {
         return (
             <div key={post.id} className="mt-3">
-                <PostCard userName={post.userName} userPicture={post.userPicture}>{post.content}</PostCard>
+                <PostCard post={post}>{post.content}</PostCard>
             </div>
         )
     })}
